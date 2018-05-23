@@ -5,6 +5,7 @@ import os
 import json
 import csv
 import time
+from pprint import pprint
 
 from datetime import date
 
@@ -29,20 +30,22 @@ class CrawlerController(object):
 class Crawler(object):
     '''Request to Market Information System'''
     def __init__(self, targets):
-        endpoint = 'http://mis.twse.com.tw/stock/api/getStockInfo.jsp'
+        self.query_url = 'http://mis.twse.com.tw/stock/api/getStockInfo.jsp'
         # Add 1000 seconds for prevent time inaccuracy
         timestamp = int(time.time() * 1000 + 1000000)
-        channels = '|'.join('tse_{}.tw'.format(target) for target in targets)
-        self.query_url = '{}?_={}&ex_ch={}'.format(endpoint, timestamp, channels)
+        channels = '%7c'.join('tse_{}.tw'.format(target) for target in targets)
+        self.payload = {'_': timestamp, 'ex_ch': channels}
 
     def get_data(self):
         try:
-            # Get original page to get session
-            req = requests.session()
-            req.get('http://mis.twse.com.tw/stock/index.jsp',
-                    headers={'Accept-Language': 'zh-TW'})
+            headers={'Accept-Language': 'zh-TW', 'User-Agent': 'Mozilla/5.0 (platform; rv:geckoversion) Gecko/geckotrail Firefox/firefoxversion'}
+            req = requests.Session()
+            req.headers.update(headers)
 
-            response = req.get(self.query_url)
+            # Get original page to get session
+            req.get('http://mis.twse.com.tw/stock/index.jsp')
+            # Get real data
+            response = req.get(self.query_url, params=self.payload)
             content = json.loads(response.text)
         except Exception as err:
             print(err)
